@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Japanese Character Learning App</title>
+  <style>
+    :root {
+      --bg: #121212;
+      --card-bg: #1e1e1e;
+      --primary: #bb86fc;
+      --accent: #03dac6;
+      --highlight: #333333;
+      --text: #e0e0e0;
+      --transition: 0.3s ease;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex; flex-direction: column; align-items: center;
+      min-height: 100vh;
+      transition: background var(--transition), color var(--transition);
+      overflow-x: hidden;
+    }
+    header, nav { width: 100%; transition: filter var(--transition), opacity var(--transition); }
+    header {
+      background: var(--card-bg);
+      padding: 1rem 0;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+    header h1 { font-size: 1.8rem; color: var(--primary); }
+    nav { margin: 1rem; text-align: center; }
+    nav button, .tabs button {
+      margin: 0 0.5rem;
+      padding: 0.6rem 1.2rem;
+      border: none; border-radius: 6px;
+      background: var(--card-bg);
+      color: var(--text);
+      cursor: pointer;
+      transition: background var(--transition), transform var(--transition);
+    }
+    nav button.active, nav button:hover, .tabs button.active, .tabs button:hover {
+      background: var(--primary);
+      transform: translateY(-2px);
+      color: #121212;
+    }
+    #content { width: 90%; max-width: 700px; margin-bottom: 2rem; position: relative; }
+    .tabs { margin: 1rem 0; }
+    .grid-container.zoomed .grid-row:not(.active) {
+      filter: blur(6px);
+      opacity: 0.4;
+      transition: filter var(--transition), opacity var(--transition);
+    }
+    body.zoomed > header,
+    body.zoomed > nav {
+      filter: blur(6px);
+      opacity: 0.4;
+    }
+    .grid-row {
+      display: grid; gap: 1rem;
+      margin-bottom: 1rem;
+      padding: 0.5rem;
+      border-radius: 8px;
+      transition: background var(--transition), transform var(--transition);
+    }
+    .grid-row:hover { background: var(--highlight); cursor: pointer; }
+    .grid-row.active {
+      background: var(--accent);
+      transform: scale(1.05);
+      z-index: 2;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+      transition: transform var(--transition);
+    }
+    .card:hover { transform: scale(1.05); }
+    .flash-card {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 250px; margin-top: 2rem;
+    }
+    .flash-char { font-size: 5rem; transition: transform var(--transition); }
+    .flash-info { margin-top: 1rem; font-size: 1.4rem; opacity: 0; transition: opacity var(--transition); }
+    .revealed .flash-info { opacity: 1; }
+  </style>
+</head>
+<body>
+  <header><h1>Japanese Character Learning</h1></header>
+  <nav>
+    <button id="learnBtn" class="active">Learning Mode</button>
+    <button id="flashBtn">Flashcard Mode</button>
+  </nav>
+  <div id="content"></div>
+  <script>
+    const hiragana = [{char:'あ',r:'a'},{char:'い',r:'i'},{char:'う',r:'u'},{char:'え',r:'e'},{char:'お',r:'o'},{char:'か',r:'ka'},{char:'き',r:'ki'},{char:'く',r:'ku'},{char:'け',r:'ke'},{char:'こ',r:'ko'},{char:'さ',r:'sa'},{char:'し',r:'shi'},{char:'す',r:'su'},{char:'せ',r:'se'},{char:'そ',r:'so'},{char:'た',r:'ta'},{char:'ち',r:'chi'},{char:'つ',r:'tsu'},{char:'て',r:'te'},{char:'と',r:'to'},{char:'な',r:'na'},{char:'に',r:'ni'},{char:'ぬ',r:'nu'},{char:'ね',r:'ne'},{char:'の',r:'no'},{char:'は',r:'ha'},{char:'ひ',r:'hi'},{char:'ふ',r:'fu'},{char:'へ',r:'he'},{char:'ほ',r:'ho'},{char:'ま',r:'ma'},{char:'み',r:'mi'},{char:'む',r:'mu'},{char:'め',r:'me'},{char:'も',r:'mo'},{char:'や',r:'ya'},{char:'ゆ',r:'yu'},{char:'よ',r:'yo'},{char:'ら',r:'ra'},{char:'り',r:'ri'},{char:'る',r:'ru'},{char:'れ',r:'re'},{char:'ろ',r:'ro'},{char:'わ',r:'wa'},{char:'を',r:'wo'},{char:'ん',r:'n'}];
+    const katakana = [{char:'ア',r:'a'},{char:'イ',r:'i'},{char:'ウ',r:'u'},{char:'エ',r:'e'},{char:'オ',r:'o'},{char:'カ',r:'ka'},{char:'キ',r:'ki'},{char:'ク',r:'ku'},{char:'ケ',r:'ke'},{char:'コ',r:'ko'},{char:'サ',r:'sa'},{char:'シ',r:'shi'},{char:'ス',r:'su'},{char:'セ',r:'se'},{char:'ソ',r:'so'},{char:'タ',r:'ta'},{char:'チ',r:'chi'},{char:'ツ',r:'tsu'},{char:'テ',r:'te'},{char:'ト',r:'to'},{char:'ナ',r:'na'},{char:'ニ',r:'ni'},{char:'ヌ',r:'nu'},{char:'ネ',r:'ne'},{char:'ノ',r:'no'},{char:'ハ',r:'ha'},{char:'ヒ',r:'hi'},{char:'フ',r:'fu'},{char:'ヘ',r:'he'},{char:'ホ',r:'ho'},{char:'マ',r:'ma'},{char:'ミ',r:'mi'},{char:'ム',r:'mu'},{char:'メ',r:'me'},{char:'モ',r:'mo'},{char:'ヤ',r:'ya'},{char:'ユ',r:'yu'},{char:'ヨ',r:'yo'},{char:'ラ',r:'ra'},{char:'リ',r:'ri'},{char:'ル',r:'ru'},{char:'レ',r:'re'},{char:'ロ',r:'ro'},{char:'ワ',r:'wa'},{char:'ヲ',r:'wo'},{char:'ン',r:'n'}];
+    const kanji = [{char:'日',m:'sun/day'},{char:'人',m:'person'},{char:'水',m:'water'},{char:'火',m:'fire'},{char:'木',m:'tree'},{char:'金',m:'gold'},{char:'土',m:'earth'},{char:'山',m:'mountain'},{char:'川',m:'river'},{char:'口',m:'mouth'}];
+
+    let mode='learn', set='hiragana', flashList=[], idx=0;
+    const content=document.getElementById('content');
+    document.getElementById('learnBtn').onclick=()=>switchMode('learn');
+    document.getElementById('flashBtn').onclick=()=>switchMode('flash');
+
+    function switchMode(m){
+      mode=m;
+      document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.id.startsWith(m)));
+      document.body.classList.remove('zoomed');
+      flashList=[];
+      render();
+    }
+
+    function render(){
+      content.innerHTML='';
+      if(mode==='learn') renderLearn(); else renderFlash();
+    }
+
+    function renderLearn(){
+      const tabs=['hiragana','katakana','kanji'];
+      const tabWrap=document.createElement('div'); tabWrap.className='tabs';
+      tabs.forEach(t=>{
+        const btn=document.createElement('button'); btn.textContent=t;
+        btn.classList.toggle('active',set===t);
+        btn.onclick=()=>{set=t;document.body.classList.remove('zoomed'); render();};
+        tabWrap.appendChild(btn);
+      }); content.appendChild(tabWrap);
+
+      const data=set==='hiragana'?hiragana:set==='katakana'?katakana:kanji;
+      const sizes=set==='kanji'?[]:[5,5,5,5,5,5,5,3,5,3];
+      let rows=[],start=0;
+      if(sizes.length) sizes.forEach(sz=>{rows.push(data.slice(start,start+sz)); start+=sz});
+      else for(let i=0;i<data.length;i+=5) rows.push(data.slice(i,i+5));
+
+      const container=document.createElement('div'); container.className='grid-container';
+      rows.forEach(row=>{
+        const rowDiv=document.createElement('div'); rowDiv.className='grid-row';
+        rowDiv.style.gridTemplateColumns=`repeat(${row.length},1fr)`;
+        row.forEach(x=>{
+          const c=document.createElement('div'); c.className='card';
+          c.innerHTML=`<div style=\"font-size:2rem\">${x.char}</div><div>${x.r||x.m}</div>`;
+          rowDiv.appendChild(c);
+        });
+        rowDiv.onclick=()=>{
+          document.body.classList.add('zoomed');
+          document.querySelectorAll('.grid-row').forEach(r=>r.classList.remove('active'));
+          rowDiv.classList.add('active');
+          rowDiv.scrollIntoView({behavior:'smooth',block:'center'});
+        };
+        container.appendChild(rowDiv);
+      }); content.appendChild(container);
+    }
+
+    function renderFlash(){
+      if(!flashList.length){flashList=[...hiragana,...katakana,...kanji];shuffle(flashList);idx=0;}
+      const card=document.createElement('div'); card.className='card flash-card';
+      const item=flashList[idx];
+      const ch=document.createElement('div'); ch.className='flash-char'; ch.textContent=item.char;
+      const info=document.createElement('div'); info.className='flash-info'; info.textContent=item.r||item.m;
+      card.append(ch,info);
+      card.onclick=()=>{if(!card.classList.contains('revealed'))card.classList.add('revealed');else{idx=(idx+1)%flashList.length;render()}};
+      content.appendChild(card);
+    }
+
+    function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
+    render();
+  </script>
+</body>
+</html>
